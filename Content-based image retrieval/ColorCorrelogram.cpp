@@ -34,47 +34,62 @@ void ColorCorrelogram::getNeighborPixels(int x, int y, int rows, int cols, int d
 
 void ColorCorrelogram::createFeature(String image_id, Mat image) {
     vector<int> distances = { 1, 3, 5, 7 };
-    int bins = 64;
-    int rows = image.rows;
-    int cols = image.cols;
+    const int bins = 64;
+    const int rows = image.rows;
+    const int cols = image.cols;
     vector<float> correlogram(bins * distances.size(), 0.0f);
 
+    // Step 1: Pre-quantize image
+    Mat quantized(rows, cols, CV_8U);
+    for (int i = 0; i < rows; ++i)
+        for (int j = 0; j < cols; ++j)
+            quantized.at<uchar>(i, j) = colorQuantization(image.at<Vec3b>(i, j));
+
+    // Step 2: Process for each distance
     for (size_t d = 0; d < distances.size(); ++d) {
         int dist = distances[d];
         vector<int> colorCount(bins, 0);
         int totalMatches = 0;
 
-        for (int x = 0; x < rows; x += max(1, rows / 100)) {
-            for (int y = 0; y < cols; y += max(1, cols / 100)) {
-                int c1 = colorQuantization(image.at<Vec3b>(x, y));
-                getNeighborPixels(x, y, rows, cols, dist);
-                for (const auto& pt : neighborPixels) {
-                    int c2 = colorQuantization(image.at<Vec3b>(pt.x, pt.y));
-                    if (c1 == c2) {
-                        colorCount[c1]++;
-                        totalMatches++;
+        vector<Point> offsets = {
+            { dist,  dist}, { dist, 0}, { dist, -dist}, {0, -dist},
+            {-dist, -dist}, {-dist, 0}, {-dist,  dist}, {0,  dist}
+        };
+
+        // Sparse sampling every ~100x100 regions
+        int stepX = max(1, rows / 100);
+        int stepY = max(1, cols / 100);
+
+        for (int x = 0; x < rows; x += stepX) {
+            for (int y = 0; y < cols; y += stepY) {
+                uchar c1 = quantized.at<uchar>(x, y);
+
+                for (const auto& offset : offsets) {
+                    int nx = x + offset.x;
+                    int ny = y + offset.y;
+                    if (nx >= 0 && nx < rows && ny >= 0 && ny < cols) {
+                        uchar c2 = quantized.at<uchar>(nx, ny);
+                        if (c1 == c2) {
+                            colorCount[c1]++;
+                            totalMatches++;
+                        }
                     }
                 }
             }
         }
 
         // Normalize
-        for (int i = 0; i < bins; ++i) {
-            if (totalMatches > 0) {
+        if (totalMatches > 0) {
+            for (int i = 0; i < bins; ++i) {
                 correlogram[d * bins + i] = static_cast<float>(colorCount[i]) / totalMatches;
             }
         }
     }
 
-    //// Combine across distances if needed (here: sum or keep as is)
-    //for (int i = 0; i < bins; ++i) {
-    //    float result = 0;
-    //    for (size_t d = 0; d < distances.size(); ++d) {
-    //        result += correlogram[d * bins + i];
-    //    }
-    //    des.push_back(result);
-    //}
-    //id = image_id;
+    // Save feature
+    id = image_id;
+    imageDescriptors = Mat(correlogram).reshape(1, 1); // 1-row descriptor
+    imageDescriptors.convertTo(imageDescriptors, CV_32F);
 }
 
 void ColorCorrelogram::showFeature(String id) {

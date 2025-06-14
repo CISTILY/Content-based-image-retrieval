@@ -33,8 +33,10 @@ void HOG::createFeature(String image_id, Mat src_image) {
     std::vector<float> descriptors;
     hog.compute(gray, descriptors);
 
-    // Convert to cv::Mat
-    Mat hogDescriptor = Mat(descriptors).clone();
+    // Convert vector to Mat (1 row, N columns) and to CV_32F
+    Mat hogDescriptor(descriptors, true);               // Copy data into Mat
+    hogDescriptor = hogDescriptor.reshape(1, 1);        // Reshape to 1 row
+    hogDescriptor.convertTo(hogDescriptor, CV_32F);     // Ensure float type
 
     // Save results
     id = image_id;

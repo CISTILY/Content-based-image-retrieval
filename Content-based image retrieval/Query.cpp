@@ -23,7 +23,7 @@ void Query::Search(string image_id, Mat query,
     }
     else if (extractMethod == "Color Correlogram") {
         feature = new ColorCorrelogram;
-        useSimilarity = false;
+        useSimilarity = true;
     }
     else if (extractMethod == "SIFT") {
         feature = new SIFTFeature; // now BoVW
