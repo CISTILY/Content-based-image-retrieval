@@ -9,8 +9,6 @@ using namespace std;
 
 class Distance {
 public:
-	float calculateCosineDistance(vector<float>, vector<float>);
-	float calculateL1Distance(vector<float>, vector<float>);
-	float calculateL2Distance(Mat, Mat);
-	float averageMinL2Distance(Mat, Mat);
+	float calculateSimilarity(Mat, Mat, string);
+	float calculateDistance(Mat, Mat, string);
 };

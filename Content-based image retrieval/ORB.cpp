@@ -1,38 +1,24 @@
 #include "ORB.h"
 
-void ORBFeature::createFeature(String id, Mat image) {
-    // Convert to grayscale if necessary
+void ORBFeature::createFeature(string image_id, Mat image) {
+    id = image_id;
+
     Mat gray;
-    if (image.channels() == 3) {
+    if (image.channels() == 3)
         cvtColor(image, gray, COLOR_BGR2GRAY);
-    }
-    else {
+    else
         gray = image.clone();
-    }
 
-    // Create ORB detector
     Ptr<ORB> orb = ORB::create();
-
-    // Detect keypoints and compute descriptors
     vector<KeyPoint> keypoints;
     Mat descriptors;
+
     orb->detectAndCompute(gray, noArray(), keypoints, descriptors);
 
-    vector<float> descriptorVector;
-
-    // Convert descriptors (uchar matrix) to float vector
-    if (!descriptors.empty()) {
+    if (!descriptors.empty() && descriptors.type() != CV_32F) {
         descriptors.convertTo(descriptors, CV_32F);
-        //localFeature.assign((float*)descriptors.datastart, (float*)descriptors.dataend);
     }
-
-    //cout << "Extracted " << localFeature.size() << " SIFT descriptor values.\n";
-
-    // Optional: Print first few values
-    /*for (size_t i = 0; i < min(size_t(10), localFeature.size()); ++i) {
-        cout << localFeature[i] << " ";
-    }
-    cout << endl;*/
+    imageDescriptors = descriptors;
 }
 
 void ORBFeature::showFeature(String id) {

@@ -19,6 +19,7 @@ class Query {
 private:
 	Image QueryImage;
 	vector<pair<string, float>> results;
+	bool useSimilarity;
 public:
 	void Search(string, Mat, map<int, vector<string>>& index, map<int, vector<float>>& centroids, map<int, vector<Feature*>>&, Mat&, int, string);
 	vector<pair<string, float>> getResult();

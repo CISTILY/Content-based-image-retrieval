@@ -7,19 +7,32 @@ void Query::Search(string image_id, Mat query,
     Mat& vocabulary,
     int kTop, string extractMethod) {
 
+    Distance distance;
+
     Feature* feature = nullptr;
     cout << "Querying" << endl;
 
-    if (extractMethod == "Color Histogram")
+    if (extractMethod == "Color Histogram") {
         feature = new ColorHistogram;
-    else if (extractMethod == "HOG")
+        useSimilarity = true;
+    }
+        
+    else if (extractMethod == "HOG") {
         feature = new HOG;
-    else if (extractMethod == "Color Correlogram")
+        useSimilarity = true;
+    }
+    else if (extractMethod == "Color Correlogram") {
         feature = new ColorCorrelogram;
-    else if (extractMethod == "SIFT")
+        useSimilarity = false;
+    }
+    else if (extractMethod == "SIFT") {
         feature = new SIFTFeature; // now BoVW
-    else if (extractMethod == "ORB")
+        useSimilarity = false;
+    }
+    else if (extractMethod == "ORB") {
         feature = new ORBFeature;  // now BoVW
+        useSimilarity = false;
+    }  
 
     if (!feature) {
         cerr << "Unsupported feature type!" << endl;
@@ -50,15 +63,27 @@ void Query::Search(string image_id, Mat query,
 
     for (const auto& [clusterId, centroidVec] : centroids) {
         Mat centroidMat(1, centroidVec.size(), CV_32F, (void*)centroidVec.data());
-        float sim = norm(queryDescriptor, centroidMat, NORM_L2);
-        cout << "Cluster ID: " << clusterId << " Similarity: " << sim << endl;
+        float sim = 0;
+        string type;
+        if (useSimilarity == true) {
+            type = "Cosine";
+            sim = distance.calculateSimilarity(queryDescriptor, centroidMat, type);
+            sort(centroidDistances.begin(), centroidDistances.end(),
+                [](const pair<int, float>& a, const pair<int, float>& b) {
+                    return a.second > b.second;
+                });
+        }
+        else {
+            type = "L2";
+            sim = distance.calculateDistance(queryDescriptor, centroidMat, type);
+            sort(centroidDistances.begin(), centroidDistances.end(),
+                [](const pair<int, float>& a, const pair<int, float>& b) {
+                    return a.second < b.second;
+                });
+        }
+        cout << "Cluster ID: " << clusterId << " Similarity: " << sim << " Type: " << type << endl;
         centroidDistances.emplace_back(clusterId, sim);
     }
-
-    sort(centroidDistances.begin(), centroidDistances.end(),
-        [](const pair<int, float>& a, const pair<int, float>& b) {
-            return a.second < b.second;
-        });
 
     // Step 2: Search in ranked clusters
     vector<pair<string, float>> distances;
@@ -76,8 +101,24 @@ void Query::Search(string image_id, Mat query,
             if (!visitedImages.insert(imgId).second) continue;
 
             const Mat& featDescriptor = feats[i]->getDescriptor();
-            float sim = norm(queryDescriptor, featDescriptor, NORM_L2);
-
+            float sim = 0;
+            string type;
+            if (useSimilarity == true) {
+                type = "Cosine";
+                sim = distance.calculateSimilarity(queryDescriptor, featDescriptor, type);
+                sort(distances.begin(), distances.end(),
+                    [](const pair<string, float>& a, const pair<string, float>& b) {
+                        return a.second > b.second;
+                    });
+            }
+            else {
+                type = "L2";
+                sim = distance.calculateDistance(queryDescriptor, featDescriptor, type);
+                sort(distances.begin(), distances.end(),
+                    [](const pair<string, float>& a, const pair<string, float>& b) {
+                        return a.second < b.second;
+                    });
+            }
             distances.emplace_back(imgId, sim);
         }
 
@@ -86,10 +127,7 @@ void Query::Search(string image_id, Mat query,
     }
 
     // Step 3: Sort and Return Results
-    sort(distances.begin(), distances.end(),
-        [](const pair<string, float>& a, const pair<string, float>& b) {
-            return a.second < b.second;
-        });
+    
 
     for (int i = 0; i < min(kTop, static_cast<int>(distances.size())); ++i) {
         cout << "ID: " << distances[i].first << " score: " << distances[i].second << endl;
