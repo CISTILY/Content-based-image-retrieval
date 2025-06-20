@@ -28,7 +28,7 @@ void Indexer::indexingImageDatabase(string imageDatabasePath, string selectedFea
 	extractFeatureImageDatabase(imageDatabasePath, selectedFeature, imageDatabase, extractedFeatures, log);
 
 	// Cluster extracted features into groups (e.g., using k-means with 5 clusters)
-	clustering(extractedFeatures, 5, labels, centers);
+	clustering(extractedFeatures, 10, labels, centers);
 	cout << "Cluster done" << endl;
 
 	// Create an index based on the clustering result and save to disk
@@ -39,7 +39,7 @@ void Indexer::indexingImageDatabase(string imageDatabasePath, string selectedFea
 }
 
 void Indexer::extractFeatureImageDatabase(string imageDatabasePath, string selectedFeature, ImageDatabase database, vector<Feature*>& extractedFeatures, Log& log) {
-	const int dictionarySize = 99; // You can parameterize this
+	const int dictionarySize = 100; // You can parameterize this
 
 	// Extract Color Histogram features
 	if (selectedFeature == "Color Histogram") {
@@ -116,7 +116,7 @@ bool Indexer::saveIndex(string indexPath, string selectedFeature, vector<Feature
 	}
 
 	// 3. Prepare output path
-	indexPath = extractPath(indexPath) + "extracted_feature/" + selectedFeature;
+	indexPath = extractPath(indexPath) + "extracted_feature/" + extractFileName(indexPath) + "/" + selectedFeature;
 	createFolderIfNotExists(indexPath);
 	string indexFile = indexPath + "/index.bin";
 
@@ -244,7 +244,7 @@ void Indexer::clustering(vector<Feature*>& features, int clusterCount, Mat& labe
 		centers
 	);
 
-	cout << "Clustering completed. Cluster count: " << clusterCount << ", Data size: " << data.rows << endl;
+	cout << "Clustering completed. Cluster count: " << clusterCount << endl;
 }
 
 string Indexer::extractPath(string filePath) {

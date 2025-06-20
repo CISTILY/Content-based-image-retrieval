@@ -7,5 +7,4 @@ public:
 	~ORBFeature() {}
 
 	void createFeature(String, Mat) override;
-	void showFeature(String) override;
 };

@@ -99,7 +99,6 @@ private:
     // Mouse Callback
     static void onMouse(int event, int x, int y, int, void* userdata);
 
-    void selfLoadImage();
     void extractFeatureAndIndexing();
     void drawRetrievedImages(Mat& ui);
     void drawUI();

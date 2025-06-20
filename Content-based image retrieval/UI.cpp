@@ -124,25 +124,6 @@ void ImageRetrievalUI::queryImage() {
     queryExecutionTime = timer.elapsedSeconds();
 }
 
-void ImageRetrievalUI::selfLoadImage() {
-    if (!imagePathInput.empty()) {
-        // Find last backslash (or slash for Linux/Mac)
-        size_t lastSlash = imagePathInput.find_last_of("\\/");
-        string filename = imagePathInput.substr(lastSlash + 1); // "01.jpg"
-
-        // Find last dot to remove extension
-        size_t lastDot = filename.find_last_of('.');
-        string nameWithoutExt = filename.substr(0, lastDot); // "01"
-
-        originalImage.assignImg(nameWithoutExt, imread(imagePathInput));
-        retrievedImages.clear(); // Clear previous results
-        cout << "Load ảnh thành công: " << imagePathInput << endl;
-    }
-    else {
-        cout << "Không thể mở file: " << imagePathInput << endl;
-    }
-}
-
 void ImageRetrievalUI::extractFeatureAndIndexing() {
     timer.start();
     if (!featureInputPath.empty()) {
@@ -298,6 +279,10 @@ string ImageRetrievalUI::browseImageFile() {
         // Find last dot to remove extension
         size_t lastDot = filename.find_last_of('.');
         string nameWithoutExt = filename.substr(0, lastDot); // "01"
+
+        if (nameWithoutExt.length() == 5) {
+            nameWithoutExt = nameWithoutExt.substr(0, 3); // Adjust if ID is 5 characters
+        }
 
         originalImage.assignImg(nameWithoutExt, imread(strPath));
         retrievedImages.clear(); // Clear previous results

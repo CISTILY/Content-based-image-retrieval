@@ -20,8 +20,3 @@ void SIFTFeature::createFeature(String image_id, Mat image) {
     }
     imageDescriptors = descriptors;
 }
-
-
-void SIFTFeature::showFeature(String image_id) {
-
-}

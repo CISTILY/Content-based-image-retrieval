@@ -20,7 +20,3 @@ void ORBFeature::createFeature(string image_id, Mat image) {
     }
     imageDescriptors = descriptors;
 }
-
-void ORBFeature::showFeature(String id) {
-
-}

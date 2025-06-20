@@ -1,39 +1,32 @@
-#include "Distances.h"
+﻿#include "Distances.h"
 
 float Distance::calculateSimilarity(Mat query, Mat image, string type) {
-    if (type == "Cosine") {
-        // Ensure the input is a single row (flattened vector)
-        if (query.rows != 1 || image.rows != 1 || query.cols != image.cols || query.type() != image.type()) {
-            cout << "Error: Input vectors must be 1D, same length and type." << endl;
-            return 0.0f;
+    if (type == "Chi-square") {
+        // Ensure both histograms are of the same size and type
+        CV_Assert(query.size() == image.size());
+        CV_Assert(query.type() == CV_32F && image.type() == CV_32F);
+
+        double chi2 = 0.0;
+
+        // Loop through each histogram bin
+        for (int i = 0; i < query.total(); ++i) {
+            float h1 = query.at<float>(i);
+            float h2 = image.at<float>(i);
+
+            // Avoid division by zero
+            if (h1 + h2 != 0.0f) {
+                chi2 += ((h1 - h2) * (h1 - h2)) / (h1 + h2);
+            }
         }
 
-        float dot_product = 0.0f;
-        float norm_a = 0.0f;
-        float norm_b = 0.0f;
+        chi2 *= 0.5;
 
-        // Use the float pointer to iterate
-        const float* query_ptr = query.ptr<float>();
-        const float* image_ptr = image.ptr<float>();
-
-        for (int i = 0; i < query.cols; ++i) {
-            dot_product += query_ptr[i] * image_ptr[i];
-            norm_a += query_ptr[i] * query_ptr[i];
-            norm_b += image_ptr[i] * image_ptr[i];
-        }
-
-        norm_a = sqrt(norm_a);
-        norm_b = sqrt(norm_b);
-
-        if (norm_a == 0.0f || norm_b == 0.0f) {
-            if (norm_a == 0.0f) cout << "Warning: norm_a is 0" << endl;
-            if (norm_b == 0.0f) cout << "Warning: norm_b is 0" << endl;
-            return 0.0f;
-        }
-
-        return dot_product / (norm_a * norm_b);
+        // Convert Chi-square distance to a similarity score in [0, 1]
+        double similarity = 1.0 / (1.0 + chi2); // As chi2 → 0, similarity → 1
+        return similarity;
     }
     else {
+        // Unsupported similarity type
         cout << "Error: Unsupported similarity type '" << type << "'" << endl;
         return 0.0f;
     }
@@ -41,7 +34,27 @@ float Distance::calculateSimilarity(Mat query, Mat image, string type) {
 
 float Distance::calculateDistance(Mat query, Mat image, string type) {
     if (type == "L2") {
+        // Euclidean (L2) distance between the two vectors
         float sim = norm(query, image, NORM_L2);
         return sim;
+    }
+    else if (type == "Hamming") {
+        // Hamming distance – assumes binary vectors stored in float format
+        CV_Assert(query.cols == image.cols && query.type() == CV_32F && image.type() == CV_32F);
+
+        int distance = 0;
+
+        for (int i = 0; i < query.cols; ++i) {
+            // Convert float to uchar to perform XOR operation
+            uchar xorByte = static_cast<uchar>(query.at<float>(0, i)) ^ static_cast<uchar>(image.at<float>(0, i));
+            distance += countNonZero(Mat(1, 1, CV_8U, xorByte));
+        }
+
+        return distance;
+    }
+    else {
+        // Unsupported distance type
+        cout << "Error: Unsupported distance type '" << type << "'" << endl;
+        return -1.0f;
     }
 }

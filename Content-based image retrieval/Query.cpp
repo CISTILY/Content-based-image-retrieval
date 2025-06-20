@@ -16,14 +16,13 @@ void Query::Search(string image_id, Mat query,
         feature = new ColorHistogram;
         useSimilarity = true;
     }
-        
-    else if (extractMethod == "HOG") {
-        feature = new HOG;
-        useSimilarity = true;
-    }
     else if (extractMethod == "Color Correlogram") {
         feature = new ColorCorrelogram;
         useSimilarity = true;
+    }
+    else if (extractMethod == "HOG") {
+        feature = new HOG;
+        useSimilarity = false;
     }
     else if (extractMethod == "SIFT") {
         feature = new SIFTFeature; // now BoVW
@@ -66,7 +65,7 @@ void Query::Search(string image_id, Mat query,
         float sim = 0;
         string type;
         if (useSimilarity == true) {
-            type = "Cosine";
+            type = "Chi-square";
             sim = distance.calculateSimilarity(queryDescriptor, centroidMat, type);
             sort(centroidDistances.begin(), centroidDistances.end(),
                 [](const pair<int, float>& a, const pair<int, float>& b) {
@@ -74,7 +73,10 @@ void Query::Search(string image_id, Mat query,
                 });
         }
         else {
-            type = "L2";
+            if (extractMethod == "ORB") 
+                type = "Hamming";
+            else 
+                type = "L2";
             sim = distance.calculateDistance(queryDescriptor, centroidMat, type);
             sort(centroidDistances.begin(), centroidDistances.end(),
                 [](const pair<int, float>& a, const pair<int, float>& b) {
@@ -104,7 +106,7 @@ void Query::Search(string image_id, Mat query,
             float sim = 0;
             string type;
             if (useSimilarity == true) {
-                type = "Cosine";
+                type = "Chi-square";
                 sim = distance.calculateSimilarity(queryDescriptor, featDescriptor, type);
                 sort(distances.begin(), distances.end(),
                     [](const pair<string, float>& a, const pair<string, float>& b) {
@@ -112,7 +114,10 @@ void Query::Search(string image_id, Mat query,
                     });
             }
             else {
-                type = "L2";
+                if (extractMethod == "ORB")
+                    type = "Hamming";
+                else
+                    type = "L2";
                 sim = distance.calculateDistance(queryDescriptor, featDescriptor, type);
                 sort(distances.begin(), distances.end(),
                     [](const pair<string, float>& a, const pair<string, float>& b) {

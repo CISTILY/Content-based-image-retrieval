@@ -10,5 +10,4 @@ public:
 	~SIFTFeature() {}
 
 	void createFeature(String, Mat) override;
-	void showFeature(String) override;
 };

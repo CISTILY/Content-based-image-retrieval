@@ -150,6 +150,7 @@
     <ClCompile Include="ORB.cpp" />
     <ClCompile Include="Query.cpp" />
     <ClCompile Include="SIFT.cpp" />
+    <ClCompile Include="Tester.cpp" />
     <ClCompile Include="Time.cpp" />
     <ClCompile Include="UI.cpp" />
   </ItemGroup>
@@ -165,6 +166,7 @@
     <ClInclude Include="ORB.h" />
     <ClInclude Include="Query.h" />
     <ClInclude Include="SIFT.h" />
+    <ClInclude Include="Tester.h" />
     <ClInclude Include="Time.h" />
     <ClInclude Include="UI.h" />
   </ItemGroup>

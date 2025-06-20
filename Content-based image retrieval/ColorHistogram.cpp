@@ -1,49 +1,38 @@
 #include "ColorHistogram.h"
 
 void ColorHistogram::createFeature(String image_id, Mat src_image) {
-    vector<Mat> bgr_planes;
-    split(src_image, bgr_planes);
-    int histSize = 256;
-    float range[] = { 0, 256 }; //the upper boundary is exclusive
-    const float* histRange[] = { range };
-    bool uniform = true, accumulate = false;
-    Mat blue_hist, green_hist, red_hist;
-    calcHist(&bgr_planes[0], 1, 0, Mat(), blue_hist, 1, &histSize, histRange, uniform, accumulate);
-    calcHist(&bgr_planes[1], 1, 0, Mat(), green_hist, 1, &histSize, histRange, uniform, accumulate);
-    calcHist(&bgr_planes[2], 1, 0, Mat(), red_hist, 1, &histSize, histRange, uniform, accumulate);
+    // Convert to HSV
+    Mat hsv_image;
+    cvtColor(src_image, hsv_image, COLOR_BGR2HSV);
 
+    // Split channels
+    vector<Mat> hsv_planes;
+    split(hsv_image, hsv_planes);
+
+    // Define histogram bin sizes for H, S, V (quantization)
+    int h_bins = 16, s_bins = 8, v_bins = 8;
+    int histSize[] = { h_bins, s_bins, v_bins };
+
+    // HSV ranges: H [0,180], S,V [0,256]
+    float h_range[] = { 0, 180 };
+    float s_range[] = { 0, 256 };
+    float v_range[] = { 0, 256 };
+    const float* ranges[] = { h_range, s_range, v_range };
+
+    // Channel indices: H=0, S=1, V=2
+    int channels[] = { 0, 1, 2 };
+
+    // Calculate 3D HSV histogram
+    Mat hsv_hist;
+    calcHist(&hsv_image, 1, channels, Mat(), hsv_hist, 3, histSize, ranges, true, false);
+
+    // Flatten the 3D histogram to 1D row vector
+    hsv_hist = hsv_hist.reshape(1, 1);  // e.g., 1 x (16*8*8) = 1 x 1024
+
+    // Optional: Normalize histogram to [0,1] (or leave raw if you want frequency)
+    normalize(hsv_hist, hsv_hist, 0, 1, NORM_MINMAX, -1, Mat());
+
+    // Set attributes
     id = image_id;
-    r_hist = red_hist.t();
-    g_hist = green_hist.t();
-    b_hist = blue_hist.t();
-
-    // Concatenate horizontally: result will be 1 x (256*3) = 1 x 768
-    Mat concatenated_hist;
-    hconcat(vector<Mat>{b_hist, g_hist, r_hist}, concatenated_hist);
-
-    // Store the concatenated histogram in a member Mat (e.g. globalFeatureMat)
-    imageDescriptors = concatenated_hist;
-}
-    
-void ColorHistogram::showFeature(String id) {
-    int histSize = 256;
-    int hist_w = 512, hist_h = 400;
-    int bin_w = cvRound((double)hist_w / histSize);
-    Mat histImage(hist_h, hist_w, CV_8UC3, Scalar(0, 0, 0));
-    normalize(b_hist, b_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat());
-    normalize(g_hist, g_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat());
-    normalize(r_hist, r_hist, 0, histImage.rows, NORM_MINMAX, -1, Mat());
-    for (int i = 1; i < histSize; i++)
-    {
-        line(histImage, Point(bin_w * (i - 1), hist_h - cvRound(b_hist.at<float>(i - 1))),
-            Point(bin_w * (i), hist_h - cvRound(b_hist.at<float>(i))),
-            Scalar(255, 0, 0), 2, 8, 0);
-        line(histImage, Point(bin_w * (i - 1), hist_h - cvRound(g_hist.at<float>(i - 1))),
-            Point(bin_w * (i), hist_h - cvRound(g_hist.at<float>(i))),
-            Scalar(0, 255, 0), 2, 8, 0);
-        line(histImage, Point(bin_w * (i - 1), hist_h - cvRound(r_hist.at<float>(i - 1))),
-            Point(bin_w * (i), hist_h - cvRound(r_hist.at<float>(i))),
-            Scalar(0, 0, 255), 2, 8, 0);
-    }
-    imshow(id, histImage);
+    imageDescriptors = hsv_hist;
 }
