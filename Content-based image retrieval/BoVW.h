@@ -8,58 +8,77 @@ using namespace cv;
 
 /**
  * @class BagOfVisualWord
- * @brief A class implementing the Bag of Visual Words (BoVW) model for image representation.
+ * @brief Implements the Bag of Visual Words (BoVW) model for image representation.
  *
- * This class allows building a visual vocabulary from local image features (e.g., SIFT descriptors),
- * and converting an image's local descriptors into a fixed-length histogram based on the vocabulary.
+ * The BagOfVisualWord class enables building a visual vocabulary from local image descriptors
+ * (e.g., SIFT, ORB) and converting an image into a fixed-length histogram representation.
+ * It is commonly used in image classification and retrieval systems.
  */
 class BagOfVisualWord {
 private:
-    Mat vocabulary;       ///< The visual vocabulary (each row is a visual word / cluster center).
-    int dictionarySize;   ///< Number of visual words (clusters) in the vocabulary.
+    Mat vocabulary;         ///< Matrix representing the visual vocabulary (each row is a cluster center).
+    int dictionarySize;     ///< Number of clusters (visual words) in the vocabulary.
 
 public:
     /**
-     * @brief Constructor to initialize with a given dictionary size.
-     * @param dictSize Number of visual words (default is 100).
+     * @brief Constructor with user-defined dictionary size.
+     *
+     * @param[in] dictSize   The number of visual words to use in the vocabulary (default is 100).
      */
-    BagOfVisualWord(int dictSize = 100) : dictionarySize(dictSize) {};
+    BagOfVisualWord(int dictSize) : dictionarySize(dictSize) {}
 
     /**
-     * @brief Constructor to initialize with a precomputed vocabulary.
-     * @param vocabulary A matrix where each row is a visual word.
+     * @brief Constructor with a precomputed vocabulary.
+     *
+     * @param[in] vocabulary   Matrix where each row is a visual word (cluster center).
      */
-    BagOfVisualWord(Mat vocabulary) : vocabulary(vocabulary) {};
+    BagOfVisualWord(Mat vocabulary) : vocabulary(vocabulary) {}
 
     /**
      * @brief Destructor.
      */
-    ~BagOfVisualWord() {};
+    ~BagOfVisualWord() {}
 
     /**
-     * @brief Builds the vocabulary using clustering (e.g., k-means) from a list of descriptors.
-     * @param descriptors A vector of Mat, where each Mat contains local descriptors from one image.
+     * @brief Builds the visual vocabulary by clustering descriptors using k-means.
      *
-     * The function merges all descriptors and clusters them into `dictionarySize` visual words.
+     * This method aggregates all descriptors across images, then clusters them into
+     * `dictionarySize` visual words. The vocabulary is stored internally.
+     *
+     * @param[in] descriptors   A vector where each element is a matrix of descriptors
+     *                          (one matrix per image; rows = local descriptors).
+     *
+     * @return void
      */
     void buildVocabulary(vector<Mat>& descriptors);
 
     /**
-     * @brief Computes the BoVW histogram for a given descriptor set using the current vocabulary.
-     * @param descriptors A matrix of descriptors extracted from an image (each row is one descriptor).
-     * @return A normalized histogram (Mat) representing the frequency of visual words.
+     * @brief Computes the BoVW histogram for a given image descriptor set.
+     *
+     * This function assigns each descriptor to its nearest visual word in the vocabulary,
+     * and creates a normalized histogram representing the frequency of each word.
+     *
+     * @param[in] descriptors   A matrix of descriptors from an image (rows = local descriptors).
+     *
+     * @return A normalized histogram (cv::Mat) representing visual word frequencies.
      */
     Mat computeHistogram(const Mat& descriptors);
 
     /**
-     * @brief Gets the current visual vocabulary.
-     * @return A Mat where each row is a visual word (cluster center).
+     * @brief Returns the current visual vocabulary.
+     *
+     * @return A matrix (cv::Mat) where each row is a visual word (cluster center).
      */
     Mat getVocabulary() const;
 
     /**
      * @brief Sets the visual vocabulary manually.
-     * @param vocab A matrix where each row represents a visual word.
+     *
+     * Allows overriding or injecting a precomputed vocabulary.
+     *
+     * @param[in] vocab   A matrix where each row represents a visual word.
+     *
+     * @return void
      */
     void setVocabulary(Mat vocab);
 };

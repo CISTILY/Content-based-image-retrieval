@@ -18,5 +18,6 @@ void ORBFeature::createFeature(string image_id, Mat image) {
     if (!descriptors.empty() && descriptors.type() != CV_32F) {
         descriptors.convertTo(descriptors, CV_32F);
     }
+
     imageDescriptors = descriptors;
 }

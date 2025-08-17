@@ -50,10 +50,3 @@ void ImageDatabase::readImageDatabase(string featureInputPath, Log& log) {
 vector<Image> ImageDatabase::getImage() {
     return Images;
 }
-
-void ImageDatabase::showAllImg() {
-    for (int i = 0; i < Images.size(); i++) {
-        Images[i].showImg();  // Show individual image
-    }
-    waitKey(0);  // Wait for user input before closing windows
-}

@@ -66,8 +66,9 @@ public:
     /**
      * @brief Calculates elapsed time in milliseconds given a start tick and frequency.
      *
-     * @param start Start time in ticks.
-     * @param freq Frequency in ticks per second.
+     * @param [in] start    Start time in ticks.
+     * @param [in] freq     Frequency in ticks per second.
+     * 
      * @return Elapsed time in milliseconds.
      */
     double elapsedTimeInMillis(long long start, long long freq) const;

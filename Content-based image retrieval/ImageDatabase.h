@@ -8,14 +8,15 @@ using namespace std;
 using namespace cv;
 
 /**
+ * @class ImageDatabase
  * @brief Manages a collection of images and provides utilities for loading and displaying them.
  *
- * The ImageDatabase class is responsible for reading images from a specified directory,
- * storing them internally, and offering basic utility functions for image access and visualization.
+ * This class handles reading images from a given directory, storing them as `Image` objects,
+ * and offering utility functions to access and display the stored images.
  */
 class ImageDatabase {
 private:
-    vector<Image> Images;  ///< Internal container holding Image objects.
+    vector<Image> Images;  ///< Internal container holding loaded image objects.
 
 public:
     /**
@@ -29,34 +30,33 @@ public:
     ~ImageDatabase() {}
 
     /**
-     * @brief Loads an image from a given file path and returns it as a Mat object.
+     * @brief Loads an image from a specified file path.
      *
-     * @param path The full file path to the image.
-     * 
-     * @return The loaded image as a Mat object.
+     * @param[in]  path   Full file path to the image file.
+     *
+     * @return A cv::Mat object containing the loaded image data.
+     *
+     * @note This function uses OpenCV’s `imread()` to load the image.
      */
     Mat loadImageWithPath(string path);
 
     /**
-     * @brief Reads all valid images from the specified directory and stores them in the database.
+     * @brief Reads all valid image files from a directory and stores them in the internal database.
      *
-     * @param imageDatabasePath The path to the folder containing image files.
-     * 
-     * @param log Logging object to record any issues or progress during loading.
+     * @param[in]      imageDatabasePath   Path to the folder containing image files.
+     * @param[in,out]  log                 Logging object used to record success or error messages.
+     *
+     * @return void
+     *
+     * @note Supported image formats depend on OpenCV's `imread()` support (e.g., PNG, JPG, BMP).
+     *       Invalid or unreadable files are logged via the provided `Log` object.
      */
     void readImageDatabase(string imageDatabasePath, Log& log);
 
     /**
-     * @brief Returns the list of Image objects stored in the database.
+     * @brief Retrieves the list of stored `Image` objects.
      *
-     * @return A vector of Image objects.
+     * @return A vector<Image> containing all loaded images.
      */
     vector<Image> getImage();
-
-    /**
-     * @brief Displays all loaded images in individual OpenCV windows.
-     *
-     * This method loops through all stored images and opens a window for each one.
-     */
-    void showAllImg();
 };

@@ -29,7 +29,7 @@ void ColorHistogram::createFeature(String image_id, Mat src_image) {
     // Flatten the 3D histogram to 1D row vector
     hsv_hist = hsv_hist.reshape(1, 1);  // e.g., 1 x (16*8*8) = 1 x 1024
 
-    // Optional: Normalize histogram to [0,1] (or leave raw if you want frequency)
+    // Optional: Normalize histogram to [0,1]
     normalize(hsv_hist, hsv_hist, 0, 1, NORM_MINMAX, -1, Mat());
 
     // Set attributes

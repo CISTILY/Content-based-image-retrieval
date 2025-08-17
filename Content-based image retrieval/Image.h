@@ -32,27 +32,33 @@ public:
     /**
      * @brief Assigns image data and identifier to the Image object.
      *
-     * @param id The image identifier (e.g., file name or path).
-     * @param img The actual image content as a `Mat`.
+     * @param[in] id   The image identifier (e.g., file name or relative path).
+     * @param[in] img  The image data stored as a cv::Mat object.
+     *
+     * @return void
      */
     void assignImg(String id, Mat img);
 
     /**
      * @brief Retrieves the image content.
      *
-     * @return The `Mat` object representing the image.
+     * @return A cv::Mat representing the pixel data of the image.
      */
     Mat getImg();
 
     /**
      * @brief Retrieves the image identifier.
      *
-     * @return A string representing the image's ID or file path.
+     * @return A string representing the image ID or file path.
      */
     String getId();
 
     /**
-     * @brief Displays the image in a window using OpenCV.
+     * @brief Displays the image in a new window using OpenCV.
+     *
+     * @return void
+     *
+     * @note The function uses `imshow()` and waits for a key press to close.
      */
     void showImg();
 };

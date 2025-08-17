@@ -1,8 +1,19 @@
-#include "Evaluate.h"
+﻿#include "Evaluate.h"
 
-void Evaluator::calculateAveragePrecision(vector<pair<string, float>> retrievedList, string query_image) {
+void Evaluator::calculateAveragePrecision(vector<pair<string, float>> retrievedList, string query_image, map<string, Feature*> groundTruth) {
     int relevantFound = 0;         // Number of relevant images found so far
+	int groundTruthSize = 0;           // Total number of relevant images in the ground truth
     double precisionSum = 0.0;     // Sum of precision values at each relevant position
+
+	// Construting groundth truth vector for the query image
+    for (const auto& entry : groundTruth) {
+        string id = entry.first;  // this is the image ID (key)
+
+        // Check if the ID contains the query image ID as substring
+        if (id.find(query_image) != string::npos) {
+            ++groundTruthSize;
+        }
+    }
 
     for (size_t i = 0; i < retrievedList.size(); ++i) {
         // Determine if current result is relevant by checking if query ID is part of the result ID
@@ -19,9 +30,12 @@ void Evaluator::calculateAveragePrecision(vector<pair<string, float>> retrievedL
 
     double averagePrecision = 0.0;
 
+	cout << "Ground truth relevant images: " << groundTruthSize << endl;
+	cout << "Relevant images found: " << relevantFound << endl;
+
     // Compute average precision if any relevant results were found
-    if (relevantFound > 0) {
-        averagePrecision = precisionSum / relevantFound;
+    if (groundTruthSize > 0) {
+        averagePrecision = precisionSum / groundTruthSize;
     }
 
     // Store the AP value for later mAP computation
@@ -44,6 +58,10 @@ void Evaluator::calculateMeanAveragePrecision() {
     cout << "Mean Average Precision (mAP): " << fixed << setprecision(4) << mAP << endl;
 }
 
-float Evaluator::getMAP() {
+vector<double> Evaluator::getAP() {
+    return averagePrecisions;
+}
+
+double Evaluator::getMAP() {
     return mAP;
 }

@@ -1,8 +1,8 @@
 #pragma once
 
 #include <vector>
-
 #include "ImageDatabase.h"
+#include "Features.h"
 
 using namespace std;
 
@@ -10,13 +10,13 @@ using namespace std;
  * @class Evaluator
  * @brief Evaluates retrieval performance using Average Precision (AP) and Mean Average Precision (mAP).
  *
- * This class accumulates per-query average precisions and computes the mean average precision
- * over a set of retrieval results. It is commonly used in content-based image retrieval systems.
+ * This class computes evaluation metrics for image retrieval systems by comparing ranked retrieval results
+ * to ground truth relevance. It supports per-query average precision calculation and aggregation to mean average precision.
  */
 class Evaluator {
 private:
     vector<double> averagePrecisions; ///< Stores the average precision for each query.
-    double mAP;                       ///< Mean Average Precision over all queries.
+    double mAP = 0.0;                       ///< Mean Average Precision over all queries.
 
 public:
     /**
@@ -26,26 +26,41 @@ public:
 
     /**
      * @brief Calculates the Average Precision (AP) for a single query.
-     * @param rankedList The ranked list of retrieved items (image ID, similarity/distance score).
-     * @param queryId The ID of the query image (used to determine relevance).
      *
-     * This method assumes that relevance is determined by matching image IDs
-     * (e.g., the same class prefix or exact match). The precision is calculated
-     * at each relevant hit in the ranked list.
+     * This function evaluates the ranked retrieval results against the ground truth.
+     * It calculates precision at each relevant position and averages over all relevant results.
+     *
+     * @param[in] rankedList  A ranked list of image results (image ID and distance or similarity score).
+     * @param[in] queryId     The ID or prefix of the query image to determine relevance.
+     * @param[in] groundTruth Map of ground truth images used for matching relevance (from index).
+     *
+     * @return void
+     *
+     * @note Relevance is determined based on substring matching (e.g., category or shared prefix).
      */
-    void calculateAveragePrecision(vector<pair<string, float>> rankedList, string queryId);
+    void calculateAveragePrecision(vector<pair<string, float>> rankedList, string queryId, map<string, Feature*> groundTruth);
 
     /**
-     * @brief Computes the Mean Average Precision (mAP) over all queries.
+     * @brief Computes the Mean Average Precision (mAP) over all evaluated queries.
      *
-     * This is calculated as the average of all stored average precision values.
-     * Should be called after running `calculateAveragePrecision()` for each query.
+     * This should be called after all queries have been evaluated using `calculateAveragePrecision()`.
+     * It computes the mean value of all stored APs.
+     *
+     * @return void
      */
     void calculateMeanAveragePrecision();
 
     /**
-     * @brief Returns the current mean average precision value.
-     * @return The computed mAP value.
+     * @brief Returns the current mean average precision (mAP).
+     *
+     * @return A double representing the mean average precision.
      */
-    float getMAP();
+    double getMAP();
+
+    /**
+     * @brief Returns the list of individual average precision (AP) values.
+     *
+     * @return A vector of AP values, one per evaluated query.
+     */
+    vector<double> getAP();
 };

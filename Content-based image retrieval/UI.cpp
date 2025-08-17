@@ -1,9 +1,4 @@
 ﻿#include"UI.h"
-string ImageRetrievalUI::extractFileName(const string& filePath) {
-    size_t lastSlash = filePath.find_last_of("\\/");
-    if (lastSlash == string::npos) return filePath;
-    return filePath.substr(lastSlash + 1);
-}
 
 void ImageRetrievalUI::onMouse(int event, int x, int y, int, void* userdata) {
     ImageRetrievalUI* self = reinterpret_cast<ImageRetrievalUI*>(userdata);
@@ -13,10 +8,12 @@ void ImageRetrievalUI::onMouse(int event, int x, int y, int, void* userdata) {
         // Handle tab switching
         if (self->featureTabButton.contains(pt)) {
             self->currentMode = FEATURE_EXTRACTION;
+			self->selectedMethodIndex = -1; // Reset method selection
             return;
         }
         if (self->queryTabButton.contains(pt)) {
             self->currentMode = QUERY_MODE;
+            self->selectedMethodIndex = -1; // Reset method selection
             return;
         }
 
@@ -28,6 +25,13 @@ void ImageRetrievalUI::onMouse(int event, int x, int y, int, void* userdata) {
             else if (self->extractButton.contains(pt)) {
                 self->extractFeatureAndIndexing();
             }
+            else if (self->vocabularySizeBox.contains(Point(x, y))) {
+                self->inputVocabActive = true;
+                self->vocabBuffer = "";  // Reset buffer for new input
+            }
+            else {
+                self->inputVocabActive = false;
+            }
         }
         else if (self->currentMode == QUERY_MODE) {
             if (self->queryBrowseBox.contains(pt)) {
@@ -35,7 +39,7 @@ void ImageRetrievalUI::onMouse(int event, int x, int y, int, void* userdata) {
             }
             else if (self->queryIndexBrowseBox.contains(pt)) {
                 self->queryIndexPath = self->browseDataFolder("Select feature database");
-                self->selectedFeature = self->extractFileName(self->queryIndexPath);
+                self->selectedFeature = self->utils.extractFileName(self->queryIndexPath);
                 self->loadActive = true;
             }
             else if (self->queryButton.contains(pt)) {
@@ -54,11 +58,14 @@ void ImageRetrievalUI::onMouse(int event, int x, int y, int, void* userdata) {
                 }
             }
             else if (self->kTopBox.contains(Point(x, y))) {
-                self->inputActive = true;
+                self->inputkTopActive = true;
                 self->kTopBuffer = "";  // Reset buffer for new input
             }
+            else if (self->ResultsBox.contains(Point(x, y))) {
+                self->drawRetrievedImagesGrid("Full results");
+            }
             else {
-                self->inputActive = false;
+                self->inputkTopActive = false;
             }
         }
 
@@ -96,30 +103,23 @@ void ImageRetrievalUI::onMouse(int event, int x, int y, int, void* userdata) {
     }
 }
 
-void ImageRetrievalUI::changeToEvaluateMode() {
-    evaluateMode = true;
-}
-
 void ImageRetrievalUI::queryImage() {
-    map<int, vector<string>> index = indexer.getIndex();
-    map<int, vector<float>> centroids = indexer.getCentroid();
-    map<int, vector<Feature*>> features = indexer.getFeatures();
+    map<string, Feature*> features = indexer.getFeatures();
     Mat vocabulary = indexer.getVocab();
 
     cout << "Getting started" << endl;
-    cout << index.size() << endl;
-    cout << centroids.size() << endl;
     cout << features.size() << endl;
 
     timer.start();
-    query.Search(originalImage.getId(), originalImage.getImg(), index, centroids, features, vocabulary, stoi(kTopText), loadActive ? selectedFeature : featureMethods[selectedMethodIndex]);
+    query.Search(originalImage.getId(), originalImage.getImg(), features, vocabulary, stoi(kTopText), loadActive ? selectedFeature : featureMethods[selectedMethodIndex]);
     vector<pair<string, float>> results = query.getResult();
 
     for (int i = 0; i < results.size(); ++i) {
+		cout << results[i].first << " - " << results[i].second << endl;
         retrievedImages.push_back(make_pair(imagedatabase.loadImageWithPath(results[i].first), results[i].second));
     }
-    evaluator.calculateAveragePrecision(results, originalImage.getId());
-    evaluator.calculateMeanAveragePrecision();
+
+    evaluator.calculateAveragePrecision(results, originalImage.getId(), features);
     timer.stop();
     queryExecutionTime = timer.elapsedSeconds();
 }
@@ -128,7 +128,7 @@ void ImageRetrievalUI::extractFeatureAndIndexing() {
     timer.start();
     if (!featureInputPath.empty()) {
         imagedatabase.readImageDatabase(featureInputPath, log);
-        indexer.indexingImageDatabase(featureInputPath, featureMethods[selectedMethodIndex], imagedatabase, log);
+        indexer.indexingImageDatabase(featureInputPath, featureMethods[selectedMethodIndex], imagedatabase, log, stoi(vocabularySizeText));
         queriable = true;
     }
     timer.stop();
@@ -178,8 +178,11 @@ void ImageRetrievalUI::drawRetrievedImages(Mat& ui) {
 
             putText(ui, rankText, Point(rankTextX, rankTextY), FONT_HERSHEY_SIMPLEX, 0.6, Scalar(0, 0, 0), 1);
 
-
-            string DistanceText = "Distance: " + to_string(retrievedImages[i].second);
+            string DistanceText = "";
+            if (selectedFeature == "HOG" || selectedFeature == "ORB" || selectedFeature == "SIFT")
+                DistanceText = "Distance: " + to_string(retrievedImages[i].second);
+            else 
+                DistanceText = "Similarity: " + to_string(retrievedImages[i].second);
             int distanceBaseLine = 0;
             textSize = getTextSize(DistanceText, FONT_HERSHEY_SIMPLEX, 0.6, 1, &distanceBaseLine);
             int distanceTextX = rankTextX - 50;
@@ -218,6 +221,57 @@ void ImageRetrievalUI::drawRetrievedImages(Mat& ui) {
         };
         fillConvexPoly(ui, ptsDown, 3, Scalar(100, 100, 100));
     }
+}
+
+void ImageRetrievalUI::drawRetrievedImagesGrid(string windowName) {
+    const int thumbW = 150, thumbH = 150;
+    const int gapX = 30, gapY = 40;
+    const int cols = 7;
+
+    int rows = (retrievedImages.size() + cols - 1) / cols;
+    int canvasW = cols * (thumbW + gapX) + gapX;
+    int canvasH = rows * (thumbH + gapY + 40) + gapY; // extra 40 for text
+
+    Mat canvas(canvasH, canvasW, CV_8UC3, Scalar(255, 255, 255)); // white background
+
+    for (size_t i = 0; i < retrievedImages.size(); ++i) {
+        const Mat& img = retrievedImages[i].first;
+
+        if (img.empty()) {
+            cerr << "Warning: retrievedImages[" << i << "] is empty!" << endl;
+            continue;
+        }
+
+        int row = i / cols;
+        int col = i % cols;
+
+        int x = gapX + col * (thumbW + gapX);
+        int y = gapY + row * (thumbH + gapY + 40);
+
+        Mat thumb;
+        resize(img, thumb, Size(thumbW, thumbH));
+        thumb.copyTo(canvas(Rect(x, y, thumbW, thumbH)));
+
+        // === Draw Rank ===
+        string rankText = "Rank #" + to_string(i + 1);
+        int baseline = 0;
+        Size textSize = getTextSize(rankText, FONT_HERSHEY_SIMPLEX, 0.6, 1, &baseline);
+        int textX = x + (thumbW - textSize.width) / 2;
+        int textY = y + thumbH + textSize.height + 5;
+
+        putText(canvas, rankText, Point(textX, textY), FONT_HERSHEY_SIMPLEX, 0.6, Scalar(0, 0, 0), 1);
+
+        // === Draw Distance ===
+        string distText = "Dist: " + to_string(retrievedImages[i].second);
+        Size distSize = getTextSize(distText, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
+        int distX = x + (thumbW - distSize.width) / 2;
+        int distY = textY + 25;
+
+        putText(canvas, distText, Point(distX, distY), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(50, 50, 50), 1);
+    }
+
+    namedWindow(windowName, WINDOW_AUTOSIZE);
+    imshow(windowName, canvas);
 }
 
 string ImageRetrievalUI::browseDataFolder(string title) {
@@ -382,12 +436,22 @@ void ImageRetrievalUI::drawUI() {
 
         // Draw execution time box for feature extraction selection
         putText(ui, "Execution time", featureExtractTimeBox.tl() - Point(0, 10), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 0), 1);
-        featureExtractTimeBox = Rect(600, 170, 170, 20); // Vị trí dropdown
+        featureExtractTimeBox = Rect(400, 170, 170, 20); // Vị trí dropdown
         rectangle(ui, featureExtractTimeBox, Scalar(255, 255, 255), -1);
         rectangle(ui, featureExtractTimeBox, Scalar(0, 0, 0), 1);
         putText(ui, to_string(featureExtractionExecutiontime) + " seconds", Point(featureExtractTimeBox.x + 5, featureExtractTimeBox.y + 13),
             FONT_HERSHEY_SIMPLEX, 0.4, Scalar(0, 0, 0), 1);
 
+        if (featureMethods[selectedMethodIndex] == "HOG" || featureMethods[selectedMethodIndex] == "SIFT" || featureMethods[selectedMethodIndex] == "ORB") {
+            putText(ui, "Vocabulary size", vocabularySizeBox.tl() - Point(0, 10), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 0), 1);
+            vocabularySizeBox = Rect(600, 170, 170, 20); // Vị trí dropdown
+            rectangle(ui, vocabularySizeBox, Scalar(255, 255, 255), -1);
+            rectangle(ui, vocabularySizeBox, Scalar(0, 0, 0), 1);
+            string toShow = inputVocabActive ? vocabBuffer : vocabularySizeText;
+            putText(ui, toShow, Point(vocabularySizeBox.x + 5, vocabularySizeBox.y + 13),
+                FONT_HERSHEY_SIMPLEX, 0.4, Scalar(0, 0, 0), 1);
+        }
+        
         // Draw dropdown box for feature extraction selection
         putText(ui, "Feature extraction method", dropdownBox.tl() - Point(0, 10), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 0), 1);
         dropdownBox = Rect(800, 170, 270, 20); // Vị trí dropdown
@@ -486,11 +550,11 @@ void ImageRetrievalUI::drawUI() {
             FONT_HERSHEY_SIMPLEX, 0.4, Scalar(0, 0, 0), 1);
 
         // Draw mAP box for querying
-        putText(ui, "mAP", mAPBox.tl() - Point(0, 10), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 0), 1);
+        putText(ui, "AP", mAPBox.tl() - Point(0, 10), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 0), 1);
         mAPBox = Rect(200, 220, 170, 20); // Vị trí dropdown
         rectangle(ui, mAPBox, Scalar(255, 255, 255), -1);
         rectangle(ui, mAPBox, Scalar(0, 0, 0), 1);
-        putText(ui, to_string(evaluator.getMAP()), Point(mAPBox.x + 5, mAPBox.y + 13),
+        putText(ui, evaluator.getAP().empty() ? "0.0000" : to_string(evaluator.getAP()[0]), Point(mAPBox.x + 5, mAPBox.y + 13),
             FONT_HERSHEY_SIMPLEX, 0.4, Scalar(0, 0, 0), 1);
 
         // Draw kTop box for querying
@@ -498,7 +562,7 @@ void ImageRetrievalUI::drawUI() {
         kTopBox = Rect(600, 220, 170, 20); // Vị trí dropdown
         rectangle(ui, kTopBox, Scalar(255, 255, 255), -1);
         rectangle(ui, kTopBox, Scalar(0, 0, 0), 1);
-        string toShow = inputActive ? kTopBuffer : kTopText;
+        string toShow = inputkTopActive ? kTopBuffer : kTopText;
         putText(ui, toShow, Point(kTopBox.x + 5, kTopBox.y + 13),
             FONT_HERSHEY_SIMPLEX, 0.4, Scalar(0, 0, 0), 1);
 
@@ -575,13 +639,14 @@ void ImageRetrievalUI::drawUI() {
             resized.copyTo(ui(Rect(130, 320, 250, 250)));
         }
 
+        if (!retrievedImages.empty()) {
+            ResultsBox = Rect(950, 285, 130, 20);
+            rectangle(ui, ResultsBox, Scalar(100, 100, 200), -1);
+            putText(ui, "View full results", ResultsBox.tl() + Point(15, 13), FONT_HERSHEY_SIMPLEX, 0.4, Scalar(255, 255, 255), 1);
+        }
+
         // Hiển thị các ảnh truy xuất (tối đa 3)
         drawRetrievedImages(ui);
-
-        // Nút "Evaluate"
-        /*rectangle(ui, evaluateButton.tl(), evaluateButton.br(), Scalar(100, 0, 100), -1);
-        putText(ui, "Evaluate mode", Point(evaluateButton.x + 20, evaluateButton.y + 15),
-            FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255, 255, 255), 1);*/
 
     }
     imshow(windowName, ui);
@@ -605,7 +670,7 @@ void ImageRetrievalUI::run() {
             }
         }
 
-        if (inputActive) {
+        if (inputkTopActive) {
             if (key >= '0' && key <= '9') {
                 kTopBuffer += (char)key;
             }
@@ -614,7 +679,20 @@ void ImageRetrievalUI::run() {
             }
             else if ((key == 13 || key == 10) && !kTopBuffer.empty()) {
                 kTopText = kTopBuffer; // Save entered value
-                inputActive = false;
+                inputkTopActive = false;
+            }
+        }
+
+        if (inputVocabActive) {
+            if (key >= '0' && key <= '9') {
+                vocabBuffer += (char)key;
+            }
+            else if (key == 8 && !vocabBuffer.empty()) {
+                vocabBuffer.pop_back(); // Handle backspace
+            }
+            else if ((key == 13 || key == 10) && !vocabBuffer.empty()) {
+                vocabularySizeText = vocabBuffer; // Save entered value
+                inputVocabActive = false;
             }
         }
     }

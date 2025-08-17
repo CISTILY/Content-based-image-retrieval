@@ -1,17 +1,16 @@
 #include "Query.h"
 
 void Query::Search(string image_id, Mat query,
-    map<int, vector<string>>& index,
-    map<int, vector<float>>& centroids,
-    map<int, vector<Feature*>>& features,
+    map<string, Feature*>& features,
     Mat& vocabulary,
-    int kTop, string extractMethod) {
-
+    int kTop, string extractMethod)
+{
     Distance distance;
-
     Feature* feature = nullptr;
+    results.clear();
     cout << "Querying" << endl;
 
+    // === Feature selection ===
     if (extractMethod == "Color Histogram") {
         feature = new ColorHistogram;
         useSimilarity = true;
@@ -25,122 +24,82 @@ void Query::Search(string image_id, Mat query,
         useSimilarity = false;
     }
     else if (extractMethod == "SIFT") {
-        feature = new SIFTFeature; // now BoVW
+        feature = new SIFTFeature;
         useSimilarity = false;
     }
     else if (extractMethod == "ORB") {
-        feature = new ORBFeature;  // now BoVW
+        feature = new ORBFeature;
         useSimilarity = false;
-    }  
-
-    if (!feature) {
+    }
+    else {
         cerr << "Unsupported feature type!" << endl;
         return;
     }
 
-    Image Image;
-    Image.assignImg(image_id, query);
-
-    feature->createFeature(Image.getId(), Image.getImg());
+    // === Feature extraction ===
+    Image img;
+    img.assignImg(image_id, query);
+    feature->createFeature(img.getId(), img.getImg());
     cout << "Query image feature extraction done" << endl;
 
-    // === Convert to BoVW if using local features ===
-    if ((extractMethod == "SIFT" || extractMethod == "ORB") && !vocabulary.empty()) {
-        const Mat& descriptors = feature->getDescriptor();  // assume this returns local descriptors
-
-        if (!descriptors.empty()) {
+    // === Convert to BoVW if local feature ===
+    if ((extractMethod == "SIFT" || extractMethod == "ORB" || extractMethod == "HOG") && !vocabulary.empty()) {
+        const Mat& localDescriptors = feature->getDescriptor();
+        if (!localDescriptors.empty()) {
             BagOfVisualWord bovw(vocabulary);
-            Mat hist = bovw.computeHistogram(feature->getDescriptor());
+            Mat hist = bovw.computeHistogram(localDescriptors);
             feature->setDescriptor(hist);
         }
     }
 
     const Mat& queryDescriptor = feature->getDescriptor();
+    if (queryDescriptor.empty()) {
+        cerr << "Query descriptor is empty!" << endl;
+        delete feature;
+        return;
+    }
 
-    // Step 1: Find nearest cluster centroid
-    vector<pair<int, float>> centroidDistances;
+    // === Search all features ===
+    vector<pair<string, float>> distances;
+    for (const auto& [imgId, f] : features) {
+        const Mat& featDescriptor = f->getDescriptor();
+        if (featDescriptor.empty())
+            cout << "No descriptor found" << endl;
 
-    for (const auto& [clusterId, centroidVec] : centroids) {
-        Mat centroidMat(1, centroidVec.size(), CV_32F, (void*)centroidVec.data());
-        float sim = 0;
+        float score = 0;
         string type;
-        if (useSimilarity == true) {
+
+        if (useSimilarity) {
             type = "Chi-square";
-            sim = distance.calculateSimilarity(queryDescriptor, centroidMat, type);
-            sort(centroidDistances.begin(), centroidDistances.end(),
-                [](const pair<int, float>& a, const pair<int, float>& b) {
-                    return a.second > b.second;
-                });
+            score = distance.calculateSimilarity(queryDescriptor, featDescriptor, type);
         }
         else {
-            if (extractMethod == "ORB") 
-                type = "Hamming";
-            else 
-                type = "L2";
-            sim = distance.calculateDistance(queryDescriptor, centroidMat, type);
-            sort(centroidDistances.begin(), centroidDistances.end(),
-                [](const pair<int, float>& a, const pair<int, float>& b) {
-                    return a.second < b.second;
-                });
-        }
-        cout << "Cluster ID: " << clusterId << " Similarity: " << sim << " Type: " << type << endl;
-        centroidDistances.emplace_back(clusterId, sim);
-    }
-
-    // Step 2: Search in ranked clusters
-    vector<pair<string, float>> distances;
-    unordered_set<string> visitedImages;
-
-    for (const auto& [clusterId, _] : centroidDistances) {
-        if (index.count(clusterId) == 0 || features.count(clusterId) == 0)
-            continue;
-
-        const vector<string>& imgIds = index[clusterId];
-        const vector<Feature*>& feats = features[clusterId];
-
-        for (size_t i = 0; i < imgIds.size() && i < feats.size(); ++i) {
-            const string& imgId = imgIds[i];
-            if (!visitedImages.insert(imgId).second) continue;
-
-            const Mat& featDescriptor = feats[i]->getDescriptor();
-            float sim = 0;
-            string type;
-            if (useSimilarity == true) {
-                type = "Chi-square";
-                sim = distance.calculateSimilarity(queryDescriptor, featDescriptor, type);
-                sort(distances.begin(), distances.end(),
-                    [](const pair<string, float>& a, const pair<string, float>& b) {
-                        return a.second > b.second;
-                    });
-            }
-            else {
-                if (extractMethod == "ORB")
-                    type = "Hamming";
-                else
-                    type = "L2";
-                sim = distance.calculateDistance(queryDescriptor, featDescriptor, type);
-                sort(distances.begin(), distances.end(),
-                    [](const pair<string, float>& a, const pair<string, float>& b) {
-                        return a.second < b.second;
-                    });
-            }
-            distances.emplace_back(imgId, sim);
+            type = "L2";
+            score = distance.calculateDistance(queryDescriptor, featDescriptor, type);
         }
 
-        if ((int)distances.size() >= kTop)
-            break;
+        distances.emplace_back(imgId, score);
     }
 
-    // Step 3: Sort and Return Results
-    
+    // === Sort results ===
+    if (useSimilarity) {
+        std::sort(distances.begin(), distances.end(),
+            [](const auto& a, const auto& b) { return a.second > b.second; });  // Higher = better
+    }
+    else {
+        std::sort(distances.begin(), distances.end(),
+            [](const auto& a, const auto& b) { return a.second < b.second; });  // Lower = better
+    }
 
-    for (int i = 0; i < min(kTop, static_cast<int>(distances.size())); ++i) {
+    // === Output top-k results ===
+    for (int i = 0; i < std::min(kTop, static_cast<int>(distances.size())); ++i) {
         cout << "ID: " << distances[i].first << " score: " << distances[i].second << endl;
         results.push_back(distances[i]);
     }
 
     delete feature;
 }
+
 
 vector<pair<string, float>> Query::getResult() {
 	return results;

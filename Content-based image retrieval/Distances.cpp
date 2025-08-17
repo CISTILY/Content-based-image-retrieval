@@ -38,20 +38,6 @@ float Distance::calculateDistance(Mat query, Mat image, string type) {
         float sim = norm(query, image, NORM_L2);
         return sim;
     }
-    else if (type == "Hamming") {
-        // Hamming distance – assumes binary vectors stored in float format
-        CV_Assert(query.cols == image.cols && query.type() == CV_32F && image.type() == CV_32F);
-
-        int distance = 0;
-
-        for (int i = 0; i < query.cols; ++i) {
-            // Convert float to uchar to perform XOR operation
-            uchar xorByte = static_cast<uchar>(query.at<float>(0, i)) ^ static_cast<uchar>(image.at<float>(0, i));
-            distance += countNonZero(Mat(1, 1, CV_8U, xorByte));
-        }
-
-        return distance;
-    }
     else {
         // Unsupported distance type
         cout << "Error: Unsupported distance type '" << type << "'" << endl;
