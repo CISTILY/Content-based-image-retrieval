@@ -262,7 +262,11 @@ void ImageRetrievalUI::drawRetrievedImagesGrid(string windowName) {
         putText(canvas, rankText, Point(textX, textY), FONT_HERSHEY_SIMPLEX, 0.6, Scalar(0, 0, 0), 1);
 
         // === Draw Distance ===
-        string distText = "Dist: " + to_string(retrievedImages[i].second);
+        string distText;
+        if (selectedFeature == "HOG" || selectedFeature == "ORB" || selectedFeature == "SIFT")
+            distText = "Distance: " + to_string(retrievedImages[i].second);
+        else
+            distText = "Similarity: " + to_string(retrievedImages[i].second);
         Size distSize = getTextSize(distText, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
         int distX = x + (thumbW - distSize.width) / 2;
         int distY = textY + 25;
