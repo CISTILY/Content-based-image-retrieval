@@ -54,3 +54,9 @@ Một hệ thống **truy vấn ảnh dựa trên nội dung (Content-Based Imag
 - OpenCV 4.10.0
 
 ## 📂 Cấu trúc thư mục
+├── Content-based image retrieval/ # Source code
+├── release/ # Executable
+├── docs/ # Report
+└── dataset/ # Generated feature database
+    ├── CD_images/ # 109 images of CDs
+    └── TBMuD/ # STANDARD parse of original TBMuD with 135 structure images
