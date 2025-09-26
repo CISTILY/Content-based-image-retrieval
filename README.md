@@ -45,24 +45,7 @@ A **Content-Based Image Retrieval (CBIR)** system implemented in **C++** and **O
 ## 📸 Demo GUI
 - Feature extraction UI and query interface that displays Top-K results.
 
-<!-- Thumbnail link (click opens the raw video file) -->
-[![Watch the video](https://raw.githubusercontent.com/CISTILY/Content-based-image-retrieval/master/thumbnail.jpg)](https://raw.githubusercontent.com/CISTILY/Content-based-image-retrieval/master/Demo/Video.mkv)
-
-<!-- Embedded video player -->
-<details>
-<summary>Play demo video (click to expand)</summary>
-
-<video controls width="720" style="max-width:100%; height:auto;">
-  <source src="https://raw.githubusercontent.com/CISTILY/Content-based-image-retrieval/master/Demo/Video.mkv" type="video/x-matroska">
-  <!-- Fallback if browser does not support MKV -->
-  <source src="https://raw.githubusercontent.com/CISTILY/Content-based-image-retrieval/master/Demo/Video.mkv" type="video/mkv">
-  Your browser does not support the HTML5 video element. You can download the demo: 
-  <a href="https://raw.githubusercontent.com/CISTILY/Content-based-image-retrieval/master/Demo/Video.mkv">Download .mkv</a>.
-</video>
-
-</details>
-
-> If you have an MP4 version of the demo, put it at `Demo/Video.mp4` — browsers support MP4 better than MKV.
+[![Video Title](https://img.youtube.com/vi/8pJurcQzZbE/0.jpg)](https://www.youtube.com/watch?v=8pJurcQzZbE)
 
 ## ⚙️ Development environment
 - Visual Studio 2022
