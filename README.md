@@ -1,64 +1,80 @@
 # 🖼️ Content-Based Image Retrieval (CBIR)
 
-Một hệ thống **truy vấn ảnh dựa trên nội dung (Content-Based Image Retrieval)** được xây dựng bằng **C++ và OpenCV**, cho phép tìm kiếm ảnh trong cơ sở dữ liệu dựa trên đặc trưng thị giác thay vì chỉ dựa vào từ khóa.
+A **Content-Based Image Retrieval (CBIR)** system implemented in **C++** and **OOP** using **OpenCV**. The project demonstrates image search using classical visual features (SIFT, SURF, ORB, color histograms), similarity measurement, ranking, and a simple GUI demo.
 
-## 🚀 Tính năng
-- Hỗ trợ nhiều phương pháp trích xuất đặc trưng:
-  - 📊 Color Histogram (HSV)
-  - 🎨 Color Correlogram
-  - 📐 Histogram of Oriented Gradients (HOG)
-  - 🔑 SIFT
-  - ⚡ ORB
-- Hỗ trợ mô hình **Bag of Visual Words (BoVW)** để giảm chiều và tăng hiệu quả tìm kiếm.
-- Xây dựng **forward index** để lưu trữ đặc trưng ảnh dưới dạng file `.bin`.
-- Giao diện trực quan để:
-  - Trích xuất đặc trưng từ tập dữ liệu ảnh
-  - Truy vấn ảnh với kết quả sắp xếp theo độ tương đồng
+## 🚀 Features
+- Supports multiple feature extractors:
+  - Color Histogram (HSV)
+  - Color Correlogram
+  - Histogram of Oriented Gradients (HOG)
+  - SIFT
+  - ORB
+- Supports **Bag of Visual Words (BoVW)** for dimensionality reduction and compact image representation.
+- Stores a **forward index** of image features in binary `.bin` files.
+- GUI tools for:
+  - Extracting features from a dataset
+  - Querying an image and ranking results by similarity
 
-## 🏗️ Kiến trúc hệ thống
+## 🏗️ System architecture
 1. **Offline Phase (Indexing)**
-   - Trích xuất đặc trưng từ ảnh
-   - Với SIFT/ORB/HOG → gom cụm bằng **K-means** → BoVW histogram
-   - Lưu đặc trưng và vocabulary vào file nhị phân `.bin`
+   - Extract features from images.
+   - For SIFT / ORB / HOG → cluster descriptors with **K-means** → build BoVW histograms.
+   - Save features and vocabulary into binary `.bin` files.
 
 2. **Online Phase (Query)**
-   - Người dùng chọn ảnh cần truy vấn
-   - Hệ thống trích xuất đặc trưng ảnh truy vấn
-   - So sánh với cơ sở dữ liệu bằng các độ đo:
-     - Chi-square (Color features)
-     - L2 / Euclidean (Local features, BoVW)
-   - Sắp xếp và trả về Top-K kết quả
+   - User selects a query image.
+   - Extract features from the query image.
+   - Compare with the stored index using:
+     - Chi-square (for color features)
+     - L2 / Euclidean (for local/BoVW features)
+   - Sort and return Top-K results.
 
-## 🧪 Thí nghiệm
-- **Datasets:**
+## 🧪 Experiments
+- **Datasets**
   - CD dataset (99 train, 10 test)
   - TMBuD dataset (100 train, 35 test)
-- **Hardware:** i5-9600K, 64GB RAM
+- **Hardware:** Intel i5-9600K, 64GB RAM
 - **Metrics:** Extraction Time, Query Time, mAP (Mean Average Precision)
 
-### 🔹 Kết quả chính
-- **SIFT + BoVW (500 visual words)** đạt mAP cao nhất (~0.5) nhưng thời gian truy vấn chậm.
-- **ORB** nhanh nhất, phù hợp ứng dụng thời gian thực, nhưng độ chính xác thấp hơn.
-- **HOG** ổn định nhưng mAP thấp.
-- **Color Histogram / Correlogram** trích xuất nhanh, nhưng hiệu quả hạn chế khi ánh sáng thay đổi.
+### 🔹 Key results
+- **SIFT + BoVW (500 visual words)** achieved the highest mAP (~0.5) but with slow query times.
+- **ORB** is the fastest and suitable for real-time scenarios, but with lower accuracy.
+- **HOG** is stable but yields lower mAP.
+- **Color Histogram / Correlogram** are fast to compute but less robust to illumination changes.
 
-## 📸 Demo giao diện
-- Giao diện chọn đặc trưng và trích xuất
-- Giao diện truy vấn và hiển thị kết quả Top-K
+## 📸 Demo GUI
+- Feature extraction UI and query interface that displays Top-K results.
 
-![Demo GUI](docs/demo_gui.png)
+<!-- Thumbnail link (click opens the raw video file) -->
+[![Watch the video](https://raw.githubusercontent.com/CISTILY/Content-based-image-retrieval/master/thumbnail.jpg)](https://raw.githubusercontent.com/CISTILY/Content-based-image-retrieval/master/Demo/Video.mkv)
 
-## ⚙️ Môi trường lập trình
+<!-- Embedded video player -->
+<details>
+<summary>Play demo video (click to expand)</summary>
+
+<video controls width="720" style="max-width:100%; height:auto;">
+  <source src="https://raw.githubusercontent.com/CISTILY/Content-based-image-retrieval/master/Demo/Video.mkv" type="video/x-matroska">
+  <!-- Fallback if browser does not support MKV -->
+  <source src="https://raw.githubusercontent.com/CISTILY/Content-based-image-retrieval/master/Demo/Video.mkv" type="video/mkv">
+  Your browser does not support the HTML5 video element. You can download the demo: 
+  <a href="https://raw.githubusercontent.com/CISTILY/Content-based-image-retrieval/master/Demo/Video.mkv">Download .mkv</a>.
+</video>
+
+</details>
+
+> If you have an MP4 version of the demo, put it at `Demo/Video.mp4` — browsers support MP4 better than MKV.
+
+## ⚙️ Development environment
 - Visual Studio 2022
 - C++17
 - OpenCV 4.10.0
 
-## 📂 Cấu trúc thư mục
+## 📂 Project structure
 ```text
-├── Content-based image retrieval/ # Source code
-├── Release/ # Executable
-├── Docs/ # Report
-├── Demo/ # Video demo
-└── Dataset/ # Generated feature database
-    ├── CD_images/ # 109 images of CDs
-    └── TBMuD/ # STANDARD parse of original TBMuD with 135 structure images
+├── Content-based image retrieval/   # Source code
+├── Release/                         # Executable
+├── Docs/                            # Reports & documentation
+├── Demo/                            # Video demo (use Git LFS if >100MB)
+└── Dataset/                         # Datasets & generated feature database
+    ├── CD_images/                   # 109 CD images
+    └── TMBuD/                       # STANDARD subset of TMBuD (135 structure images)
